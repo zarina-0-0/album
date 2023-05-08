@@ -80,6 +80,119 @@
       </div>
     </div>
   </section>
+  
+  <!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+</head>
+<body onload="define_type()">
+    <img id="image" src="/lewy.jpg" width="300" />
+    <input type="file" id="image_input" accept="image/png, image/jpg, image/jpeg"/>
+    <div id="display_image"></div>
+</body>
+</html>
+
+<style>
+    body{
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        flex-direction: column;
+        height: 100vh;
+
+    }
+
+    #display_image {
+        width: 256px;
+        height: 256px;
+        border: 1px solid black;
+        background-position: center;
+        background-size: cover;
+    }
+
+    #image_input{
+        justify-content: center;
+    }
+</style>
+
+<script>
+    const image_input = document.querySelector("#image_input");
+    var uploaded_image = "";
+
+    image_input.addEventListener("change", function () {
+        //console.log(image_input.value);
+        const reader = new FileReader();
+        reader.addEventListener("load", () => {
+            uploaded_image = reader.result;
+            document.querySelector("#display_image").style.backgroundImage = 'url(${uploaded_image})';
+        });
+        reader.readAsDataURL(this.files[0]);
+    });
+
+</script>
+
+<script>
+
+    async function load_model() {
+        return tf.loadLayersModel('model.json');
+    }
+
+    function preprocess(imgData) {
+        //convert the image data to a tensor
+        let tensor = tf.browser.fromPixels(imgData, numChannels = 1)
+        //resize to 208 x 176
+        const resized = tf.image.resizeBilinear(tensor, [208, 176]).toFloat()
+        // Normalize the image
+        const offset = tf.scalar(255.0);
+        const normalized = tf.scalar(1.0).sub(resized.div(offset));
+        //We add a dimension to get a batch shape
+        const batched = normalized.expandDims(0);
+        return batched;
+    }
+
+    async function define_type() {
+        console.log("define type called");
+        let model = await load_model();
+
+        const image = document.getElementById("image");
+
+        const tensor = preprocess(image);
+
+        //const res = model.predictOnBatch(tensor);
+        //res.print();
+        const predictClasses = model.predict(tensor);
+        const res = predictClasses.squeeze();
+        //const abs_tensor = tf.abs(predictClasses);
+        const myClass = res.argMax().dataSync()[0];
+        const values = res.dataSync();
+        const arr = Array.from(values);
+        console.log(values);
+        console.log(arr);
+        res.print();
+        console.log(myClass);
+
+        /*
+        console.log("tensor rank: " + tensor.rank);
+        console.log("tensor shape: " + tensor.shape);
+        console.log("tensor dtype: " + tensor.dtype);
+        */
+
+        /*
+        console.log("information:");
+        console.log(model.inputLayers);
+        console.log(model.outputLayers);
+        model.summary();
+        */
+
+        tensor.dispose();
+        res.dispose();
+        predictClasses.dispose();
+    }
+    </script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 
   <div class="album py-5 bg-light">
     <div class="container">
